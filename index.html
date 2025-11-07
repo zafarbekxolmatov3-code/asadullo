@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Always-On Dashboard (HTML)</title>
+  <style>
+    :root{
+      --bg:#f4f6f8; --card:#fff; --muted:#6b7280; --accent:#4f46e5; --border:#e6e9ee;
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+    body{margin:0;background:var(--bg);color:#0f172a;padding:18px}
+    .wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 2fr 1fr;gap:18px}
+    header{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;box-shadow:0 1px 4px rgba(15,23,42,0.04)}
+    .btn{background:transparent;border:1px solid var(--border);padding:6px 10px;border-radius:8px;cursor:pointer}
+    input,textarea,select{width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:transparent}
+    .list{list-style:none;padding:0;margin:0}
+    .list li{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;border:1px solid transparent}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px}
+    .flex{display:flex;gap:8px;align-items:center}
+    .grow{flex:1}
+    .danger{color:#b91c1c}
+    @media (max-width:900px){ .wrap{grid-template-columns:1fr; } header{flex-direction:column;align-items:flex-start;gap:8px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Always-On Dashboard (HTML)</h1>
+    <div class="flex">
+      <button id="exportBtn" class="btn">Export JSON</button>
+      <label class="btn" style="cursor:pointer">
+        Import JSON
+        <input id="importFile" type="file" accept="application/json" style="display:none">
+      </label>
+      <button id="clearAll" class="btn">Clear all</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- left column -->
+    <div>
+      <div class="card">
+        <h3 style="margin:0 0 8px 0">Quick add</h3>
+        <div class="small muted">Todo</div>
+        <div class="flex" style="margin:8px 0">
+          <input id="quickTodo" placeholder="Yangi vazifa">
+          <button class="btn" onclick="addTodoFromQuick()">Add</button>
+        </div>
+
+        <div class="small muted">Bookmark</div>
+        <input id="quickBmTitle" placeholder="Sarlavha (ixtiyoriy)" style="margin-top:6px">
+        <div class="flex" style="margin-top:6px">
+          <input id="quickBmUrl" placeholder="https://example.com" class="grow">
+          <button class="btn" onclick="addBookmarkFromQuick()">Save</button>
+        </div>
+
+        <div style="margin-top:10px" class="muted small">Stats: <span id="statText">—</span></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 style="margin:0 0 8px 0">Bookmarks</h3>
+        <ul id="bmList" class="list" style="max-height:280px;overflow:auto"></ul>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 style="margin:0 0 8px 0">Translator (stub)</h3>
+        <textarea id="trIn" rows="3" placeholder="Matn kiriting..."></textarea>
+        <div class="flex" style="margin-top:8px">
+          <button class="btn" onclick="translateStub()">Translate</button>
+          <button class="btn" onclick="document.getElementById('trIn').value='';document.getElementById('trOut').textContent='';">Clear</button>
+        </div>
+        <div id="trOut" style="margin-top:8px;min-height:36px" class="muted small">Tarjima natijasi shu yerda chiqadi.</div>
+      </div>
+    </div>
+
+    <!-- middle column -->
+    <main>
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Notes</h3>
+          <div class="flex">
+            <button class="btn" onclick="newNote()">Yangi</button>
+            <input id="searchNotes" placeholder="Search notes/todos" style="margin-left:8px">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:260px 1fr;gap:10px;margin-top:12px">
+          <div style="border-right:1px solid var(--border);padding-right:8px">
+            <ul id="notesList" class="list" style="max-height:56vh;overflow:auto"></ul>
+          </div>
+          <div>
+            <input id="noteTitle" placeholder="Sarlavha" style="margin-bottom:8px">
+            <textarea id="noteContent" rows="12" placeholder="Eslatma..."></textarea>
+            <div class="flex" style="margin-top:8px;justify-content:flex-end">
+              <button class="btn" onclick="saveSelectedNote()">Save</button>
+              <button class="btn danger" style="border-color:transparent" onclick="deleteSelectedNote()">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin:0 0 8px 0">To-Do</h3>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="todoInput" placeholder="Yangi vazifa" class="grow">
+          <button class="btn" onclick="addTodoFromInput()">Add</button>
+        </div>
+        <ul id="todoList" class="list" style="max-height:22vh;overflow:auto"></ul>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px 0">Planner</h3>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="planDate" type="date" style="width:160px">
+          <input id="planText" placeholder="Nimani rejalashtiryapsiz" class="grow">
+          <button class="btn" onclick="addPlan()">Add</button>
+        </div>
+        <ul id="planList" class="list" style="max-height:18vh;overflow:auto"></ul>
+      </div>
+    </main>
+
+    <!-- right column -->
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin:0 0 8px 0">Pomodoro</h3>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div id="pomTime" style="font-family:monospace;font-size:28px">25:00</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="flex">
+              <button class="btn" onclick="pomStart()">Start</button>
+              <button class="btn" onclick="pomPause()">Pause</button>
+              <button class="btn" onclick="pomReset()">Reset</button>
+            </div>
+            <div class="muted small">Mode: <span id="pomMode">work</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px 0">Today</h3>
+        <div class="small muted">Active tasks: <span id="todayTasks">0</span></div>
+        <div style="margin-top:8px">
+          <h4 style="margin:0 0 6px 0">Import/Export quick</h4>
+          <div class="small muted">Export JSON/Import above. Saqlash brauzer localStorage’da.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const KEY = { notes: 'aod_notes', todos: 'aod_todos', bms: 'aod_bms', plans: 'aod_plans', pom: 'aod_pom' };
+const $ = id => document.getElementById(id);
+const readJSON = (k, def) => { try { return JSON.parse(localStorage.getItem(k)) || def; } catch(e){ return def; } };
+const writeJSON = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+let notes = readJSON(KEY.notes, []);
+let todos = readJSON(KEY.todos, []);
+let bms = readJSON(KEY.bms, []);
+let plans = readJSON(KEY.plans, []);
+let pom = readJSON(KEY.pom, { mode:'work', running:false, remaining:25*60 });
+
+function renderStats(){
+  $('statText').textContent = `Bookmarks: ${bms.length} • Notes: ${notes.length} • Tasks: ${todos.length}`;
+  $('todayTasks').textContent = todos.filter(t=>!t.done).length;
+}
+function renderBMs(){
+  const ul = $('bmList'); ul.innerHTML = '';
+  if(bms.length===0) ul.innerHTML = '<li class="muted small">Hech nima saqlanmagan</li>';
+  bms.forEach(b => {
+    const li = document.createElement('li');
+    li.innerHTML = `<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:160px"><a href="${escapeHtml(b.url)}" target="_blank">${escapeHtml(b.title||b.url)}</a></div>
+                    <div class="flex"><button class="btn" onclick="openBm('${b.id}')">Open</button><button class="btn" onclick="delBm('${b.id}')">Del</button></div>`;
+    ul.appendChild(li);
+  });
+}
+function renderNotes(){
+  const ul = $('notesList'); ul.innerHTML = '';
+  if(notes.length===0) ul.innerHTML = '<li class="muted small">Eslatmangiz yo‘q</li>';
+  notes.forEach(n=>{
+    const li = document.createElement('li');
+    li.id = 'note-'+n.id;
+    li.style.cursor='pointer';
+    li.onclick = ()=>selectNote(n.id);
+    li.innerHTML = `<div style="font-weight:600">${escapeHtml(n.title||'Без заголовка')}</div><div class="muted small">${new Date(n.updated||n.id).toLocaleString()}</div>`;
+    ul.appendChild(li);
+  });
+}
+function renderTodos(){
+  const ul = $('todoList'); ul.innerHTML = '';
+  if(todos.length===0) ul.innerHTML = '<li class="muted small">Vazifangiz yo‘q</li>';
+  todos.forEach(t=>{
+    const li = document.createElement('li');
+    li.innerHTML = `<div class="flex" style="align-items:center;gap:8px"><input type="checkbox" ${t.done? 'checked' : ''} onchange="toggleTodo('${t.id}')"><div style="${t.done? 'text-decoration:line-through;color:var(--muted)' : ''}">${escapeHtml(t.text)}</div></div>
+                    <div><button class="btn" onclick="delTodo('${t.id}')">Del</button></div>`;
+    ul.appendChild(li);
+  });
+}
+function renderPlans(){
+  const ul = $('planList'); ul.innerHTML = '';
+  if(plans.length===0) ul.innerHTML = '<li class="muted small">Rejalar yo‘q</li>';
+  plans.forEach(p=>{
+    const li = document.createElement('li');
+    li.innerHTML = `<div><div style="font-weight:600">${escapeHtml(p.text)}</div><div class="muted small">${p.date||'—'}</div></div>
+                    <div class="flex"><button class="btn" onclick="togglePlan('${p.id}')">${p.done? 'Undo' : 'Done'}</button></div>`;
+    ul.appendChild(li);
+  });
+}
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+let selectedNoteId = null;
+function newNote(){
+  const n = { id: String(Date.now()), title:'Yangi eslatma', content:'', updated: Date.now() };
+  notes.unshift(n); writeJSON(KEY.notes, notes); renderNotes(); selectNote(n.id);
+}
+function selectNote(id){
+  selectedNoteId = id;
+  const n = notes.find(x=>x.id===id);
+  if(!n) return;
+  $('noteTitle').value = n.title;
+  $('noteContent').value = n.content;
+  document.querySelectorAll('#notesList li').forEach(li=>li.style.background='transparent');
+  const el = $('note-'+id); if(el) el.style.background='#f1f5f9';
+}
+function saveSelectedNote(){
+  if(!selectedNoteId) return alert('Eslatma tanlanmagan');
+  const idx = notes.findIndex(x=>x.id===selectedNoteId);
+  if(idx===-1) return;
+  notes[idx].title = $('noteTitle').value;
+  notes[idx].content = $('noteContent').value;
+  notes[idx].updated = Date.now();
+  writeJSON(KEY.notes, notes); renderNotes(); renderStats();
+}
+function deleteSelectedNote(){
+  if(!selectedNoteId) return alert('Eslatma tanlanmagan');
+  if(!confirm('Oʻchirishni tasdiqlaysizmi?')) return;
+  notes = notes.filter(x=>x.id!==selectedNoteId);
+  selectedNoteId = null;
+  $('noteTitle').value=''; $('noteContent').value='';
+  writeJSON(KEY.notes, notes); renderNotes(); renderStats();
+}
+
+function addTodoFromQuick(){
+  const v = $('quickTodo').value.trim(); if(!v) return;
+  todos.unshift({ id:String(Date.now()), text:v, done:false }); $('quickTodo').value=''; writeJSON(KEY.todos,todos); renderTodos(); renderStats();
+}
+function addTodoFromInput(){
+  const v = $('todoInput').value.trim(); if(!v) return;
+  todos.unshift({ id:String(Date.now()), text:v, done:false }); $('todoInput').value=''; writeJSON(KEY.todos,todos); renderTodos(); renderStats();
+}
+function toggleTodo(id){
+  todos = todos.map(t=> t.id===id ? ({...t, done:!t.done}) : t );
+  writeJSON(KEY.todos,todos); renderTodos(); renderStats();
+}
+function delTodo(id){
+  todos = todos.filter(t=>t.id!==id); writeJSON(KEY.todos,todos); renderTodos(); renderStats();
+}
+
+function addBookmarkFromQuick(){
+  const url = $('quickBmUrl').value.trim();
+  if(!url) return alert('URL kiriting');
+  const title = $('quickBmTitle').value.trim() || url;
+  bms.unshift({ id:String(Date.now()), title, url });
+  $('quickBmTitle').value=''; $('quickBmUrl').value='';
+  writeJSON(KEY.bms,bms); renderBMs(); renderStats();
+}
+function openBm(id){
+  const b = bms.find(x=>x.id===id); if(b) window.open(b.url,'_blank');
+}
+function delBm(id){ bms = bms.filter(x=>x.id!==id); writeJSON(KEY.bms,bms); renderBMs(); renderStats(); }
+
+function addPlan(){
+  const d = $('planDate').value;
+  const t = $('planText').value.trim();
+  if(!t) return;
+  plans.unshift({ id:String(Date.now()), date:d, text:t, done:false });
+  $('planText').value='';
+  writeJSON(KEY.plans,plans); renderPlans(); renderStats();
+}
+function togglePlan(id){
+  plans = plans.map(p=> p.id===id ? ({...p, done:!p.done}) : p );
+  writeJSON(KEY.plans,plans); renderPlans(); renderStats();
+}
+
+function translateStub(){
+  const s = $('trIn').value.trim();
+  if(!s) return alert('Matn kiriting');
+  $('trOut').textContent = s.split('').reverse().join('');
+}
+
+$('exportBtn').onclick = ()=> {
+  const payload = { notes, todos, bms, plans, pom };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'aod_backup.json'; a.click(); URL.revokeObjectURL(url);
+};
+$('importFile').onchange = async (e) => {
+  const f = e.target.files[0]; if(!f) return;
+  const txt = await f.text();
+  try {
+    const data = JSON.parse(txt);
+    if(data.notes) notes = data.notes;
+    if(data.todos) todos = data.todos;
+    if(data.bms) bms = data.bms;
+    if(data.plans) plans = data.plans;
+    if(data.pom) pom = data.pom;
+    writeJSON(KEY.notes,notes); writeJSON(KEY.todos,todos); writeJSON(KEY.bms,bms); writeJSON(KEY.plans,plans); writeJSON(KEY.pom,pom);
+    renderAll();
+    alert('Import muvaffaqiyatli');
+  } catch(err){ alert('Fayl formatida xatolik'); }
+};
+
+$('clearAll').onclick = ()=> {
+  if(!confirm('Barcha lokal ma`lumotlar o‘chiriladi. Davom etasizmi?')) return;
+  localStorage.removeItem(KEY.notes); localStorage.removeItem(KEY.todos); localStorage.removeItem(KEY.bms); localStorage.removeItem(KEY.plans); localStorage.removeItem(KEY.pom);
+  notes = []; todos = []; bms = []; plans = []; pom = { mode:'work', running:false, remaining:25*60 };
+  renderAll();
+}
+
+$('searchNotes').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    const q = e.target.value.toLowerCase();
+    const fn = notes.find(n => (n.title+' '+n.content).toLowerCase().includes(q));
+    if(fn){ selectNote(fn.id); }
+    const ft = todos.find(t => t.text.toLowerCase().includes(q));
+    if(ft){ alert('Todo topildi: ' + ft.text); }
+  }
+});
+
+let pomInterval = null;
+function formatTime(s){ const m = Math.floor(s/60); const sec = s%60; return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0'); }
+function renderPom(){
+  $('pomTime').textContent = formatTime(pom.remaining);
+  $('pomMode').textContent = pom.mode;
+  writeJSON(KEY.pom, pom);
+}
+function pomTick(){
+  if(!pom.running) return;
+  if(pom.remaining <= 0){
+    pom.mode = (pom.mode === 'work') ? 'break' : 'work';
+    pom.remaining = (pom.mode === 'work')? 25*60 : 5*60;
+    try { if(Notification && Notification.permission === 'granted') new Notification('Pomodoro', { body: `Mode: ${pom.mode}` }); } catch(e){}
+  } else {
+    pom.remaining -= 1;
+  }
+  renderPom();
+}
+function pomStart(){
+  if(!pom.running){
+    pom.running = true;
+    if(!pomInterval) pomInterval = setInterval(pomTick, 1000);
+    writeJSON(KEY.pom,pom);
+  }
+}
+function pomPause(){ pom.running = false; if(pomInterval){ clearInterval(pomInterval); pomInterval = null; } writeJSON(KEY.pom,pom); renderPom(); }
+function pomReset(){ pom.running=false; pom.mode='work'; pom.remaining=25*60; if(pomInterval){ clearInterval(pomInterval); pomInterval=null } writeJSON(KEY.pom,pom); renderPom(); }
+
+function renderAll(){ renderBMs(); renderNotes(); renderTodos(); renderPlans(); renderStats(); renderPom(); }
+renderAll();
+if(pom.running && !pomInterval) pomInterval = setInterval(pomTick, 1000);
+
+document.addEventListener('click', ()=>{ renderNotes(); if(selectedNoteId) selectNote(selectedNoteId); });
+</script>
+</body>
+</html>
